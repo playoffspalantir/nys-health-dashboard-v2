@@ -4,7 +4,6 @@ import pandas as pd
 import altair as alt
 from modules import utils, ai_analysis
 
-st.set_page_config(page_title="SDoH Explorer", page_icon="📊", layout="wide")
 st.title("📊 Social Determinants of Health (SDoH) Explorer")
 st.write(
     "Compare key socio-economic indicators across New York counties using data from the US Census Bureau's American Community Survey (ACS).")

@@ -5,7 +5,6 @@ from datetime import datetime
 import json
 import html
 
-st.set_page_config(page_title="Report Builder", page_icon="📋", layout="wide")
 st.title("📋 Consolidated Report Builder")
 
 if "saved_analyses" not in st.session_state or not st.session_state.saved_analyses:

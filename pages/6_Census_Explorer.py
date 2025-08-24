@@ -4,7 +4,6 @@ import pandas as pd
 import altair as alt
 from modules import utils  # Import our shared utility functions
 
-st.set_page_config(page_title="Census Explorer", page_icon="🌎", layout="wide")
 st.title("🌎 US Census Data Explorer")
 st.write("An interface to query, visualize, and compare data directly from the US Census Bureau API.")
 

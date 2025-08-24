@@ -8,7 +8,6 @@ import json
 import html
 from modules.utils import create_chart  # We need the create_chart function
 
-st.set_page_config(page_title="CHIP Report", page_icon="📄", layout="wide")
 st.title("📄 Community Health Improvement Plan Report")
 
 if 'chip_report_sections' not in st.session_state or not st.session_state.chip_report_sections:

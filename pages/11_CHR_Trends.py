@@ -5,7 +5,6 @@ import altair as alt
 from modules import utils
 from pathlib import Path
 
-st.set_page_config(page_title="CHR Trends", page_icon="🏆", layout="wide")
 st.title("🏆 County Health Rankings - Trend Explorer")
 st.write("Visualize trends over time for key health measures from the County Health Rankings & Roadmaps program.")
 

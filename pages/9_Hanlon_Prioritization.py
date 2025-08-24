@@ -4,9 +4,6 @@ import pandas as pd
 from modules import utils, ai_analysis
 from pathlib import Path  # <-- Import the Path library
 
-# --- Page Configuration ---
-st.set_page_config(page_title="Hanlon Prioritization", page_icon="🧮", layout="wide")
-
 
 # --- Load Data (with ROBUST path) ---
 @st.cache_data

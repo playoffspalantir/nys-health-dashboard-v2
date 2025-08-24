@@ -5,8 +5,6 @@ import altair as alt
 from modules import utils, ai_analysis
 from pathlib import Path
 
-st.set_page_config(page_title="CHIP Wizard", page_icon="✍️", layout="wide")
-
 
 @st.cache_data
 def load_pa_data():
