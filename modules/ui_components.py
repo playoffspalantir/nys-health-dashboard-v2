@@ -76,7 +76,16 @@ def render_dashboard(config, df):
         config['indicator_label']]:
         current = st.session_state.current_ai_analysis
         st.markdown(current["analysis_text"])
+        # In modules/ui_components.py, find and REPLACE this block inside render_dashboard
+
         if st.button("💾 Save This Analysis", key="save_analysis"):
+            # --- NEW: Generate and save the chart's JSON "recipe" ---
+            chart_for_saving = utils.create_chart(current["raw_data"], current["config"])
+            chart_json = chart_for_saving.to_json()
+
+            # Add the JSON to the dictionary we're saving
+            current["chart_json"] = chart_json
+
             if "saved_analyses" not in st.session_state: st.session_state.saved_analyses = []
             st.session_state.saved_analyses.append(current)
             st.session_state.current_ai_analysis = None

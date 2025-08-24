@@ -1,23 +1,19 @@
-# pages/5_📋_Report_Builder.py
+# pages/5_Report_Builder.py
 import streamlit as st
 import markdown
 from datetime import datetime
 import json
 import html
-import io
-from modules.utils import create_chart
 
-st.title("📋 Report Builder")
+st.set_page_config(page_title="Report Builder", page_icon="📋", layout="wide")
+st.title("📋 Consolidated Report Builder")
 
 if "saved_analyses" not in st.session_state or not st.session_state.saved_analyses:
-    st.info(
-        "No analyses saved yet. Go to a dashboard, generate an analysis, and click '💾 Save This Analysis' to add it here.")
+    st.info("No analyses saved yet. Go to a dashboard and click '💾 Save This Analysis'.")
     st.stop()
 
-# This is the view_saved_analyses function, now living on its own page
-html_parts = []
-indices_to_remove = []
-
+# --- UI for managing saved analyses (unchanged) ---
+indices_to_remove = [];
 for i, snap in enumerate(st.session_state.saved_analyses):
     with st.container():
         st.subheader(f"{i + 1}. {snap['dashboard']}: {snap['indicator']}")
@@ -25,30 +21,82 @@ for i, snap in enumerate(st.session_state.saved_analyses):
             indices_to_remove.append(i)
         st.markdown(snap['analysis_text'])
         st.markdown("---")
-
-    chart = create_chart(snap['raw_data'], snap['config']).properties(width='container')
-    html_buffer = io.StringIO()
-    chart.save(html_buffer, format='html')
-    chart_html = html_buffer.getvalue()
-
-    html_parts.append(f"<h2>{i + 1}. {snap['dashboard']}: {snap['indicator']}</h2>")
-    html_parts.append(f"<p><strong>Filters:</strong> <code>{snap['filters']}</code></p>")
-    html_parts.append(chart_html)
-    if snap['data_source']: html_parts.append(f"<p><strong>Source:</strong> {', '.join(snap['data_source'])}</p>")
-    if snap['data_notes']:
-        notes_html = "<ul>" + "".join([f"<li>{note}</li>" for note in snap['data_notes']]) + "</ul>"
-        html_parts.append(f"<div><strong>Data Notes:</strong>{notes_html}</div>")
-    analysis_html = markdown.markdown(snap['analysis_text'])
-    html_parts.append(f"<div><h3>AI-Generated Analysis</h3>{analysis_html}</div>")
-    html_parts.append("<hr>")
-
 for i in sorted(indices_to_remove, reverse=True):
-    st.session_state.saved_analyses.pop(i)
+    st.session_state.saved_analyses.pop(i);
     st.rerun()
 
-html_style = "<style>body{font-family:sans-serif;line-height:1.6;}h1,h2{color:#2c3e50;border-bottom:2px solid #eee;padding-bottom:5px;}h3{color:#34495e;}code{background-color:#f4f4f4;padding:2px 5px;border-radius:4px;}</style>"
-final_html = f"<!DOCTYPE html><html><head><title>NYS Health Report</title>{html_style}</head><body><h1>NYS Health Data Report</h1><p><em>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</em></p>{''.join(html_parts)}</body></html>"
+st.divider();
+st.header("Download Full Report")
+
+# ==============================================================================
+# --- FINAL, CORRECT REPORT GENERATION LOGIC ---
+# ==============================================================================
+report_html_parts = []
+vega_embed_scripts = []
+
+for i, snap in enumerate(st.session_state.saved_analyses):
+    chart_div_id = f"vis{i}"
+
+    # --- THIS IS THE FIX: No json.dumps here ---
+    # We will pass the raw JSON string directly into the JavaScript template.
+    chart_spec = snap['chart_json']
+
+    # Create the JavaScript call for this specific chart
+    script = f"""
+        const spec{i} = {chart_spec};
+        spec{i}.width = 'container';
+        spec{i}.height = 300;
+        vegaEmbed('#{chart_div_id}', spec{i}, {{"actions": false}});
+    """
+    vega_embed_scripts.append(script)
+
+    # Build the HTML body part for this section
+    section_html = f"""
+    <h2>{i + 1}. {snap['dashboard']}: {snap['indicator']}</h2>
+    <p><strong>Filters:</strong> <code>{snap['filters']}</code></p>
+    <div id="{chart_div_id}" class="chart-container"></div>
+    <p><strong>Source:</strong> {', '.join(snap['data_source'])}</p>
+    <div><strong>Data Notes:</strong><ul>{''.join([f"<li>{note}</li>" for note in snap['data_notes']])}</ul></div>
+    <div><h3>AI-Generated Insights</h3>{markdown.markdown(snap['analysis_text'])}</div>
+    <hr>
+    """
+    report_html_parts.append(section_html)
+
+# --- Create the single, master script tag ---
+master_script = f"""
+<script type="text/javascript">
+    // This function will run after the page is fully loaded
+    window.onload = function() {{
+        {';'.join(vega_embed_scripts)}
+    }};
+</script>
+"""
+
+# --- Assemble the final HTML document ---
+final_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NYS Health Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <style>
+        body{{font-family:sans-serif;}} h1,h2{{color:#2c3e50; border-bottom:2px solid #eee;}}
+        code{{background-color:#f4f4f4; padding:2px 5px; border-radius:4px;}}
+        .chart-container{{width: 100%; height: 350px;}}
+    </style>
+</head>
+<body>
+    <h1>NYS Health Data Report</h1>
+    <p><em>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</em></p>
+    {''.join(report_html_parts)}
+    {master_script}
+</body>
+</html>
+"""
 
 st.download_button(
-    label="📥 Download Full Report as HTML (Print to PDF from Browser)",
-    data=final_html, file_name="NYS_Health_Data_Report.html", mime="text/html")
+    label="📥 Download Full Report as HTML",
+    data=final_html, file_name="NYS_Health_Data_Report.html", mime="text/html"
+)

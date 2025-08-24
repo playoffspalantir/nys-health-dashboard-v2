@@ -1,0 +1,27 @@
+# .streamlit/config.toml
+
+[theme]
+# Primary accent color for interactive elements
+primaryColor = "#5a9aff" # A softer, professional blue
+
+# Background color for the main content area
+backgroundColor = "#1a1a1a" # A very dark slate gray
+
+# Background color for sidebar and most interactive widgets
+secondaryBackgroundColor = "#262730"
+
+# Color of text in the main content area
+textColor = "#fafafa" # A clean, slightly off-white
+
+# Font family for all text in the app, except code blocks
+# Stacks from left to right in order of preference
+font = "sans serif"
+
+
+[ui]
+# Hides the menu button and footer from the user's view
+hideTopBar = true
+
+[sidebar]
+# This will automatically collapse the sidebar on mobile
+collapsed = true
