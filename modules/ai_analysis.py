@@ -58,3 +58,43 @@ def analyze_mch_data(df, indicator_name):
               f"Focus on county-level progress towards the MCH Objective and mention if data quality comments (e.g., 'Unstable Estimate') warrant cautious interpretation of the trends.\n\n"
               f"Data:\n```{data_string}```")
     return _get_ai_response(prompt)
+
+def analyze_sdoh_data(df, year, counties):
+    """AI analysis tailored for Social Determinants of Health."""
+    if df.empty:
+        return "No data for analysis."
+
+    # Prepare the data for the prompt, making it easy for the AI to read
+    data_string = df.to_csv(index=False)
+
+    prompt = (f"You are a sociologist and public health expert providing an objective, data-driven summary. "
+              f"Based *only* on the provided {year} American Community Survey data for the following New York counties: {', '.join(counties)}, "
+              f"write a concise analysis in one or two paragraphs of formal prose. "
+              f"Do not use bullet points or markdown formatting (like bolding).\n\n"
+              f"In your analysis, identify which county appears to face the most significant socio-economic challenges based on these indicators. "
+              f"Briefly explain how factors like poverty, insurance coverage, and income might influence the overall health of its population.\n\n"
+              f"Data:\n```{data_string}```")
+
+    return _get_ai_response(prompt)  # Reuse our existing helper function
+
+
+# --- NEW FUNCTION TO ADD AT THE END OF modules/ai_analysis.py ---
+
+def summarize_county_snapshot(county_name, metrics_dict):
+    """
+    Generates an AI-powered executive summary for a county's health snapshot.
+    """
+    # Convert the dictionary of metrics into a clean string for the prompt
+    metrics_summary = "\n".join(
+        [f"- {indicator}: {value} ({year})" for indicator, (value, year) in metrics_dict.items() if value != "N/A"])
+
+    if not metrics_summary:
+        return "Not enough data to generate a summary."
+
+    prompt = (f"You are a public health director writing an executive summary for a stakeholder briefing. "
+              f"Based *only* on the following key health indicators for {county_name}, write a concise, one-paragraph summary in formal prose. "
+              f"Do not use bullet points or markdown formatting (like bolding). "
+              f"In your summary, identify what appears to be the most significant public health challenge and a potential strength based on these specific data points.\n\n"
+              f"Key Indicators:\n{metrics_summary}")
+
+    return _get_ai_response(prompt)  # Reuse our existing helper function
