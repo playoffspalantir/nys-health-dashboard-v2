@@ -101,19 +101,16 @@ def load_ejscreen_data(file_path):
 
 @st.cache_data
 def load_county_geojson(file_path):
-    """Loads the GeoJSON file containing county boundaries."""
     try:
         with open(file_path) as f:
             return json.load(f)
     except FileNotFoundError:
-        st.error(f"GeoJSON file not found at {file_path}. Please ensure it is in the 'data' folder.")
-        return None
+        st.error(f"GeoJSON file not found at {file_path}. Please ensure it is in the 'data' folder."); return None
     except Exception as e:
-        st.error(f"Error loading or parsing GeoJSON file: {e}")
-        return None
+        st.error(f"Error loading or parsing GeoJSON file: {e}"); return None
 
 # ==============================================================================
-# --- CENSUS HELPER FUNCTIONS ---
+# --- Helper Functions ---
 # ==============================================================================
 def clean_variable_label(label: str) -> str:
     if not isinstance(label, str): return "N/A"
@@ -151,7 +148,6 @@ def fetch_census_data(dataset: str, year: str, variables: list, geo_for: str, ge
         st.error("API Error: Received unexpected data format."); return pd.DataFrame()
 
 def get_census_snapshot(county_name):
-    """Fetches key demographic data from the latest ACS5 census for a specific county."""
     county_fips = NY_COUNTY_FIPS_MAP.get(county_name)
     if not county_fips:
         return {"error": "County FIPS code not found."}
@@ -168,50 +164,9 @@ def get_census_snapshot(county_name):
             results[name] = "N/A"
     return results
 
-# ==============================================================================
-# --- DASHBOARD HELPER FUNCTIONS ---
-# ==============================================================================
-def find_best_indicator_match(keyword, indicator_list):
-    """Finds the best matching indicator name from a list based on a keyword."""
-    keyword_lower = keyword.lower()
-    matches = [ind for ind in indicator_list if keyword_lower in ind.lower()]
-    if not matches:
-        return None
-    matches.sort(key=len)
-    return matches[0]
-
-def get_latest_metric_smart(df, county, county_col, year_col, value_col, indicator_keyword, indicator_col):
-    """Finds the most recent data point using a smart matching function for the indicator."""
-    if df is None: return "N/A", ""
-    all_indicators = df[indicator_col].unique()
-    best_match_indicator = find_best_indicator_match(indicator_keyword, all_indicators)
-    if best_match_indicator is None:
-        return "N/A", ""
-    filtered_df = df[(df[county_col] == county) & (df[indicator_col] == best_match_indicator)].copy()
-    if filtered_df.empty: return "N/A", ""
-    filtered_df[year_col] = pd.to_numeric(filtered_df[year_col], errors='coerce')
-    filtered_df.dropna(subset=[year_col, value_col], inplace=True)
-    if filtered_df.empty: return "N/A", ""
-    latest_entry = filtered_df.sort_values(by=year_col, ascending=False).iloc[0]
-    value = latest_entry[value_col]
-    year = int(latest_entry[year_col])
-    try:
-        return f"{float(value):.1f}", str(year)
-    except (ValueError, TypeError):
-        return str(value), str(year)
-
-
-# In modules/utils.py, REPLACE the entire get_snapshot_data function
-
 def get_snapshot_data(chirs_df, pa_df, mch_df, county_name):
-    """
-    A single, robust function to get all key metrics for the County Snapshot page.
-    This version uses the confirmed, exact indicator names for maximum reliability.
-    """
     results = {}
-
     def fetch_metric(df, county, county_col, indicator_full_name, indicator_col, year_col, value_col):
-        # This internal helper function is correct and does not need changes
         filtered_df = df[(df[county_col] == county) & (df[indicator_col] == indicator_full_name)].copy()
         if filtered_df.empty: return "N/A", ""
         filtered_df[year_col] = pd.to_numeric(filtered_df[year_col], errors='coerce')
@@ -224,49 +179,25 @@ def get_snapshot_data(chirs_df, pa_df, mch_df, county_name):
             return f"{float(value):.1f}", str(year)
         except (ValueError, TypeError):
             return str(value), str(year)
-
-    # --- 1. CHIRS Data ---
-    val, year = fetch_metric(chirs_df, f"{county_name} County", 'Geographic area',
-                             "All cancer incidence rate per 100,000", "Indicator Title", 'Year', 'Rate/Percent')
+    val, year = fetch_metric(chirs_df, f"{county_name} County", 'Geographic area', "All cancer incidence rate per 100,000", "Indicator Title", 'Year', 'Rate/Percent')
     results["All Cancer Incidence"] = (val, year, "All cancer incidence rate per 100,000")
-
-    # --- 2. Prevention Agenda Data ---
-    val, year = fetch_metric(pa_df, county_name, 'County Name',
-                             "Percentage of deaths that are premature (before age 65 years)", "Indicator", 'Data Years',
-                             'Percentage/Rate/Ratio')
+    val, year = fetch_metric(pa_df, county_name, 'County Name', "Percentage of deaths that are premature (before age 65 years)", "Indicator", 'Data Years', 'Percentage/Rate/Ratio')
     results["Premature Deaths (%)"] = (val, year, "Percentage of deaths that are premature (before age 65 years)")
-    val, year = fetch_metric(pa_df, county_name, 'County Name', "Prevalence of cigarette smoking among adults",
-                             "Indicator", 'Data Years', 'Percentage/Rate/Ratio')
+    val, year = fetch_metric(pa_df, county_name, 'County Name', "Prevalence of cigarette smoking among adults", "Indicator", 'Data Years', 'Percentage/Rate/Ratio')
     results["Adult Smoking (%)"] = (val, year, "Prevalence of cigarette smoking among adults")
-    val, year = fetch_metric(pa_df, county_name, 'County Name', "Percentage of adults with obesity", "Indicator",
-                             'Data Years', 'Percentage/Rate/Ratio')
+    val, year = fetch_metric(pa_df, county_name, 'County Name', "Percentage of adults with obesity", "Indicator", 'Data Years', 'Percentage/Rate/Ratio')
     results["Adult Obesity (%)"] = (val, year, "Percentage of adults with obesity")
-
-    # --- 3. MCH Data (with CORRECTED, AVAILABLE indicator names) ---
-    val, year = fetch_metric(mch_df, county_name, 'County Name',
-                             "Percentage of births with early (1st trimester) prenatal care", "Indicator", 'Data Years',
-                             'Percentage/Rate')
+    val, year = fetch_metric(mch_df, county_name, 'County Name', "Percentage of births with early (1st trimester) prenatal care", "Indicator", 'Data Years', 'Percentage/Rate')
     results["Early Prenatal Care (%)"] = (val, year, "Percentage of births with early (1st trimester) prenatal care")
-
-    val, year = fetch_metric(mch_df, county_name, 'County Name', "Infant mortality rate per 1,000 live births",
-                             "Indicator", 'Data Years', 'Percentage/Rate')
+    val, year = fetch_metric(mch_df, county_name, 'County Name', "Infant mortality rate per 1,000 live births", "Indicator", 'Data Years', 'Percentage/Rate')
     results["Infant Mortality Rate"] = (val, year, "Infant mortality rate per 1,000 live births")
-
-    # --- 4. Add the two additional indicators WITH DATA ---
-    val, year = fetch_metric(mch_df, county_name, 'County Name',
-                             "Percentage of preterm births (less than 37 weeks gestation)", "Indicator", 'Data Years',
-                             'Percentage/Rate')
+    val, year = fetch_metric(mch_df, county_name, 'County Name', "Percentage of preterm births (less than 37 weeks gestation)", "Indicator", 'Data Years', 'Percentage/Rate')
     results["Preterm Births (%)"] = (val, year, "Percentage of preterm births (less than 37 weeks gestation)")
-
-    # Let's find a reliable indicator from the Prevention Agenda data
-    val, year = fetch_metric(pa_df, county_name, 'County Name', "Preventable hospitalizations, rate per 100,000",
-                             "Indicator", 'Data Years', 'Percentage/Rate/Ratio')
+    val, year = fetch_metric(pa_df, county_name, 'County Name', "Preventable hospitalizations, rate per 100,000", "Indicator", 'Data Years', 'Percentage/Rate/Ratio')
     results["Preventable Hospitalizations"] = (val, year, "Preventable hospitalizations, rate per 100,000")
-
     return results
 
 def get_pa_data_for_chip(df, priority_area, focus_area, indicator_name, county_name):
-    """Fetches objective, recent data, and trend data for the CHIP."""
     objective_text = "Not available"; data_point_text = "Not available"; trend_df = pd.DataFrame()
     if df is None: return objective_text, data_point_text, trend_df
     indicator_df = df[(df['Priority Area'] == priority_area) & (df['Focus Area'] == focus_area) & (df['Indicator'] == indicator_name)]
@@ -284,11 +215,18 @@ def get_pa_data_for_chip(df, priority_area, focus_area, indicator_name, county_n
             if pd.notna(value): data_point_text = f"{value} {measure} ({year})"
     return objective_text, data_point_text, trend_df
 
+def get_hanlon_data(df, county, priority, focus, indicator):
+    if df is None: return None
+    filtered_df = df[(df['County Name'] == county) & (df['Priority Area'] == priority) & (df['Focus Area'] == focus) & (df['Indicator'] == indicator)].copy()
+    if filtered_df.empty: return None
+    filtered_df['Data Years'] = pd.to_numeric(filtered_df['Data Years'], errors='coerce')
+    filtered_df = filtered_df.sort_values(by='Data Years', ascending=False)
+    return filtered_df
+
 # ==============================================================================
 # --- Charting Function ---
 # ==============================================================================
 def create_chart(df, config):
-    """Reusable function to create an Altair chart from a config."""
     line = alt.Chart(df).mark_line(point=True).encode(
         x=alt.X(f"{config['year_col']}:N", title='Year', sort=alt.SortField(config['year_col'])),
         y=alt.Y(f"{config['value_col']}:Q", title=config['y_axis_label'], scale=alt.Scale(zero=False)),
